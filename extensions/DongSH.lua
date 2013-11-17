@@ -30,7 +30,7 @@ juejinglua = sgs.CreateTriggerSkill
 		if( event == sgs.EventPhaseChanging 
 			 and data:toPhaseChange().to == sgs.Player_Discard) then
 			if( HandcardNum > 4 ) then
-				room:askForDiscard(player, "juejing" , HandcardNum - 4 , HandcardNum - 4)
+				room:askForDiscard(player, "juejinglua" , HandcardNum - 4 , HandcardNum - 4)
 			end
 			return true 
 		end

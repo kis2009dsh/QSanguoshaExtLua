@@ -34,7 +34,7 @@ sgs.ai_view_as.longhunluavs = function(card, player, card_place)
 end
 
 sgs.longhunluavs_suit_value = {
-	heart = 9.9,
+	heart = 7,
 	spade = 5,
 	club = 5,
 }
@@ -54,7 +54,9 @@ sgs.ai_skill_cardask["@luawangcai_card"] = function(self, data)
 	if all_cards:isEmpty() then return "." end
 	local cards = {}
 	for _, card in sgs.qlist(all_cards) do
-		table.insert(cards, card)
+		if not card:hasFlag("using") then
+			table.insert(cards, card)
+		end
 	end
 
 	if #cards == 0 then return "." end
@@ -73,6 +75,47 @@ sgs.ai_skill_cardask["@luawangcai_card"] = function(self, data)
 	end
 	
 	return "."
+end
+
+sgs.ai_skill_discard.juejinglua = function(self, discard_num, min_num, optional, include_equip)
+	self:assignKeep(self:assignKeepNum(), true)
+	if optional then 
+		return {} 
+	end
+	local flag = "h"
+	local equips = self.player:getEquips()
+	-- if include_equip and not (equips:isEmpty() or self.player:isJilei(equips:first())) then flag = flag .. "e" end
+	local cards = self.player:getCards(flag)
+	local to_discard = {}
+	cards = sgs.QList2Table(cards)
+	local aux_func = function(card)
+		local place = self.room:getCardPlace(card:getEffectiveId())
+		if self:hasSkills(sgs.lose_equip_skill) then 
+			return 5
+		else 
+			return 0 
+		end
+		return 0
+	end
+	local compare_func = function(a, b)
+		if aux_func(a) ~= aux_func(b) then return aux_func(a) < aux_func(b) end
+		return self:getLongHunKeepValue(a) < self:getLongHunKeepValue(b)
+	end
+
+	table.sort(cards, compare_func)
+	local least = min_num
+	if discard_num - min_num > 1 then
+		least = discard_num -1
+	end
+	for _, card in ipairs(cards) do
+		if not self.player:isJilei(card) then 
+			table.insert(to_discard, card:getId()) 
+		end
+		if (self.player:hasSkill("qinyin") and #to_discard >= least) or #to_discard >= discard_num then 
+			break 
+		end
+	end
+	return to_discard
 end
 
 --[[ DSH End]]

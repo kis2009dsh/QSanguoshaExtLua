@@ -383,6 +383,15 @@ function SmartAI:getKeepValue(card, kept)
 end
 
 --[[ DSH BEGIN ]]
+function SmartAI:getCombinedValue( left , right )
+	
+	local max_value = math.max( left , right )
+	local min_value = math.min( left , right )
+	local sum_value = min_value + max_value 
+	
+	return (1.0 + (1.0 * min_value /sum_value) ) * max_value
+end
+
 function SmartAI:getCardNameBySuitString(suit_string)
 	-- {"club", "spade", "diamond", "heart"}
 	if suit_string == "heart" then
@@ -410,7 +419,7 @@ function SmartAI:getLongHunUseValue(card)
 	if implicit_card_name == card_name then
 		return use_value
 	else
-		return use_value + implicit_use_value
+		return self:getCombinedValue( implicit_use_value , use_value )
 	end
 end
 
@@ -428,7 +437,25 @@ function SmartAI:getLongHunKeepValue(card)
 	if implicit_card_name == card_name then
 		return use_value
 	else
-		return use_value + implicit_use_value
+		return self:getCombinedValue( implicit_use_value , use_value )
+	end
+end
+
+function SmartAI:getLongHunUsePriority(card)
+	local card_name   = card:objectName()
+	local suit_string = card:getSuitString()
+	
+	local implicit_card_name = self:getCardNameBySuitString(suit_string)
+	
+	local implicit_card = sgs.Sanguosha:cloneCard(implicit_card_name , card:getSuit() , card:getNumber())
+	
+	local use_value = self:getUsePriority(card)                     -- sgs.ai_use_value[class_name]
+	local implicit_use_value = self:getUsePriority(implicit_card)   -- sgs.ai_use_value[implicit_card_name]
+	
+	if implicit_card_name == card_name then
+		return use_value
+	else
+		return self:getCombinedValue( implicit_use_value , use_value )
 	end
 end
 
@@ -925,8 +952,6 @@ function SmartAI:sortByKeepValue(cards,inverse,kept)
 	table.sort(cards, compare_func)
 end
 
-
-
 function SmartAI:sortByUseValue(cards,inverse)
 	local compare_func = function(a,b)
 		local value1 = self:getUseValue(a)
@@ -955,7 +980,23 @@ function SmartAI:sortByUsePriority(cards, player)
 			return a:getNumber() > b:getNumber()
 		end
 	end
-	table.sort(cards, compare_func) 
+	
+	local compare_func_longhun = function(a,b)
+		local value1 = self:getLongHunUsePriority(a)
+		local value2 = self:getLongHunUsePriority(b)
+
+		if value1 ~= value2 then
+			return value1 > value2
+		else
+			return a:getNumber() > b:getNumber()
+		end
+	end
+	
+	if player:hasSkill("longhunluavs") then
+		table.sort(cards, compare_func_longhun )
+	else
+		table.sort(cards, compare_func) 
+	end
 end
 
 function SmartAI:sortByDynamicUsePriority(cards)
